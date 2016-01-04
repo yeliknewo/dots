@@ -2,13 +2,17 @@ extern crate piston_window;
 
 extern crate image as im;
 
+extern crate rand;
+
+use rand::*;
+
 use piston_window::*;
 
 use std::sync::{Mutex, Arc, RwLock};
 use std::thread::{self, JoinHandle};
 
-const WIDTH: usize = 1920 / 64;
-const HEIGHT: usize = 1080;
+const WIDTH: usize = 1920 / 4;
+const HEIGHT: usize = 1080 / 4;
 
 use std::collections::VecDeque;
 
@@ -42,9 +46,9 @@ fn main() {
                 let mut blue = 0.0;
                 for world in &worlds {
                     match world.get_color() {
-                        Color::Red => red = world.get_data_at(x, y) * 255.0,
-                        Color::Green => green = world.get_data_at(x, y) * 255.0,
-                        Color::Blue => blue = world.get_data_at(x, y) * 255.0,
+                        Color::Red => red = world.get_data_at(x, y),
+                        Color::Green => green = world.get_data_at(x, y),
+                        Color::Blue => blue = world.get_data_at(x, y),
                     }
                 }
                 canvas.put_pixel(x as u32, y as u32, im::Rgba([red as u8, green as u8, blue as u8, 255]));
@@ -52,8 +56,9 @@ fn main() {
         }
         texture.update(&mut *e.factory.borrow_mut(), &canvas).expect("Unable to Update Texture");
         e.draw_2d(|c, g| {
+            clear([0.0; 4], g);
             image(&texture, c.transform, g);
-        })
+        });
     }
 }
 
@@ -91,17 +96,15 @@ impl World {
                     let dots = dots.read().expect("Dots Lock Error");
                     let mut world_events = world_events.lock().expect("World Events Lock Error");
                     let scan_sum = scan_loop(&*dots, x, y, 1);
-                    world_events.push_back(WorldEvents::Set(x, y, 1.0));
+                    world_events.push_back(WorldEvents::Set(x, y, rand::OsRng::new().unwrap().next_f32()));
                     /*if scan_sum > 5.0 {
-                        world_events.push_back(WorldEvents::Add(x, y, -0.01));
+                        world_events.push_back(WorldEvents::Add(x, y, -0.1));
                     } else if scan_sum > 4.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (y % 8) as f32));
-                    } else if scan_sum > 3.9 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 1.1 * ((x % 4) + (y % 4)) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.97 * (y) as f32));
                     } else if scan_sum > 3.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (x % 8) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.97 * (x) as f32));
                     } else {
-                        world_events.push_back(WorldEvents::Add(x, y, 0.01));
+                        world_events.push_back(WorldEvents::Add(x, y, 0.1));
                     }*/
                 }
             }));
@@ -118,15 +121,13 @@ impl World {
                     let mut world_events = world_events.lock().expect("World Events Lock Error");
                     let scan_sum = scan_loop(&*dots, x, y, 1);
                     if scan_sum > 5.0 {
-                        world_events.push_back(WorldEvents::Add(x, y, -0.01));
+                        world_events.push_back(WorldEvents::Add(x, y, -0.1));
                     } else if scan_sum > 4.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (y % 8) as f32));
-                    } else if scan_sum > 3.9 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 1.1 * ((x % 8) + (y % 8)) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.98 * (y) as f32));
                     } else if scan_sum > 3.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (x % 8) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.98 * (x) as f32));
                     } else {
-                        world_events.push_back(WorldEvents::Add(x, y, 0.01 * (1.0 + (x % 2) as f32)));
+                        world_events.push_back(WorldEvents::Add(x, y, 0.1));
                     }
                 }
             }));
@@ -143,15 +144,13 @@ impl World {
                     let mut world_events = world_events.lock().expect("World Events Lock Error");
                     let scan_sum = scan_loop(&dots, x, y, 1);
                     if scan_sum > 5.0 {
-                        world_events.push_back(WorldEvents::Add(x, y, -0.01));
+                        world_events.push_back(WorldEvents::Add(x, y, -0.1));
                     } else if scan_sum > 4.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (y % 4) as f32));
-                    } else if scan_sum > 3.9 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 1.1 * ((x % 8) + (y % 8)) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.99 * (y) as f32));
                     } else if scan_sum > 3.0 {
-                        world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (x % 4) as f32));
+                        world_events.push_back(WorldEvents::Mul(x, y, 0.99 * (x) as f32));
                     } else {
-                        world_events.push_back(WorldEvents::Add(x, y, 0.01 * (1.0 + (x % 2) as f32)));
+                        world_events.push_back(WorldEvents::Add(x, y, 0.1));
                     }
                 }
             }));
@@ -187,7 +186,7 @@ impl World {
     fn get_data_at(&self, x: usize, y: usize) -> f32 {
         let dots = self.dot_data.clone();
         let val: f32 = dots.read().expect("Unable to Write to Dot Data")[y][x];
-        return val.max(1.0).min(0.0)
+        return val * 255.0
     }
 
     fn get_color(&self) -> Color {

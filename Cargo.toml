@@ -6,3 +6,4 @@ authors = ["yelik"]
 [dependencies]
 piston_window = "*"
 image = "*"
+rand = "*"
