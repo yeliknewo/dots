@@ -2,6 +2,7 @@
 name = "dots"
 version = "0.1.0"
 dependencies = [
+ "image 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston_window 0.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

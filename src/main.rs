@@ -1,14 +1,61 @@
 extern crate piston_window;
 
+extern crate image as im;
+
 use piston_window::*;
 
 use std::sync::{Mutex, Arc, RwLock};
 use std::thread::{self, JoinHandle};
 
-const WIDTH: usize = 1920 / 16;
-const HEIGHT: usize = 1080 / 16;
+const WIDTH: usize = 1920 / 64;
+const HEIGHT: usize = 1080;
 
 use std::collections::VecDeque;
+
+fn main() {
+    let opengl = OpenGL::V4_4;
+
+    let window: PistonWindow = WindowSettings::new("Hello Piston!", [WIDTH as u32, HEIGHT as u32])
+        .exit_on_esc(true)
+        .opengl(opengl)
+        .build()
+        .expect("Error building PistonWindow");
+
+    let mut worlds = vec![World::new(Color::Red), World::new(Color::Green), World::new(Color::Blue)];
+
+    let mut canvas = im::ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
+    let mut texture = Texture::from_image(
+        &mut *window.factory.borrow_mut(),
+        &canvas,
+        &TextureSettings::new()
+    ).expect("Unable to make texture");
+
+    for e in window {
+        println!("Starting Update");
+        for mut world in &mut worlds {
+            world.update();
+        }
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let mut red = 0.0;
+                let mut green = 0.0;
+                let mut blue = 0.0;
+                for world in &worlds {
+                    match world.get_color() {
+                        Color::Red => red = world.get_data_at(x, y) * 255.0,
+                        Color::Green => green = world.get_data_at(x, y) * 255.0,
+                        Color::Blue => blue = world.get_data_at(x, y) * 255.0,
+                    }
+                }
+                canvas.put_pixel(x as u32, y as u32, im::Rgba([red as u8, green as u8, blue as u8, 255]));
+            }
+        }
+        texture.update(&mut *e.factory.borrow_mut(), &canvas).expect("Unable to Update Texture");
+        e.draw_2d(|c, g| {
+            image(&texture, c.transform, g);
+        })
+    }
+}
 
 struct World {
     dot_color: Color,
@@ -44,7 +91,8 @@ impl World {
                     let dots = dots.read().expect("Dots Lock Error");
                     let mut world_events = world_events.lock().expect("World Events Lock Error");
                     let scan_sum = scan_loop(&*dots, x, y, 1);
-                    if scan_sum > 5.0 {
+                    world_events.push_back(WorldEvents::Set(x, y, 1.0));
+                    /*if scan_sum > 5.0 {
                         world_events.push_back(WorldEvents::Add(x, y, -0.01));
                     } else if scan_sum > 4.0 {
                         world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (y % 8) as f32));
@@ -53,8 +101,8 @@ impl World {
                     } else if scan_sum > 3.0 {
                         world_events.push_back(WorldEvents::Mul(x, y, 0.9 * (x % 8) as f32));
                     } else {
-                        world_events.push_back(WorldEvents::Add(x, y, 0.01 * (1.0 + (x % 2) as f32)));
-                    }
+                        world_events.push_back(WorldEvents::Add(x, y, 0.01));
+                    }*/
                 }
             }));
         }
@@ -138,8 +186,8 @@ impl World {
 
     fn get_data_at(&self, x: usize, y: usize) -> f32 {
         let dots = self.dot_data.clone();
-        let val = dots.read().expect("Unable to Write to Dot Data")[y][x];
-        return val
+        let val: f32 = dots.read().expect("Unable to Write to Dot Data")[y][x];
+        return val.max(1.0).min(0.0)
     }
 
     fn get_color(&self) -> Color {
@@ -152,48 +200,6 @@ enum Color {
     Red,
     Green,
     Blue
-}
-
-fn main() {
-    let window: PistonWindow = WindowSettings::new("Hello Piston!", [1920, 1080])
-        .exit_on_esc(true)
-        .opengl(OpenGL::V4_4)
-        .build()
-        .expect("Error building PistonWindow");
-
-    let mut worlds = vec![World::new(Color::Red), World::new(Color::Green), World::new(Color::Blue)];
-
-    let dot_width = window.size().width as f64 / WIDTH as f64;
-    let dot_height = window.size().height as f64 / HEIGHT as f64;
-
-    for e in window {
-        for mut world in &mut worlds {
-            world.update();
-        }
-        e.draw_2d(|c, g| {
-            clear([1.0; 4], g);
-            for y in 0..HEIGHT {
-                for x in 0..WIDTH {
-                    let mut red = 0.0;
-                    let mut green = 0.0;
-                    let mut blue = 0.0;
-                    for world in &worlds {
-                        match world.get_color() {
-                            Color::Red => red = world.get_data_at(x, y),
-                            Color::Green => green = world.get_data_at(x, y),
-                            Color::Blue => blue = world.get_data_at(x, y),
-                        }
-                    }
-                    rectangle(
-                        [red, green, blue, 1.0],
-                        [x as f64 * dot_width as f64, y as f64 * dot_height, dot_width, dot_height],
-                        c.transform,
-                        g
-                    );
-                }
-            }
-        })
-    }
 }
 
 fn scan_loop(dots: &Vec<Vec<f32>>, start_x: usize, start_y: usize, range: isize) -> f32 {
