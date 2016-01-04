@@ -1,0 +1,7 @@
+[package]
+name = "dots"
+version = "0.1.0"
+authors = ["yelik"]
+
+[dependencies]
+piston_window = "*"
