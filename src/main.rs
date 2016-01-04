@@ -157,6 +157,7 @@ enum Color {
 fn main() {
     let window: PistonWindow = WindowSettings::new("Hello Piston!", [1920, 1080])
         .exit_on_esc(true)
+        .opengl(OpenGL::V4_4)
         .build()
         .expect("Error building PistonWindow");
 
