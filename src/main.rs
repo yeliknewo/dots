@@ -4,6 +4,9 @@ extern crate image as im;
 
 extern crate rand;
 
+extern crate glutin_window;
+use glutin_window::GlutinWindow;
+
 use rand::*;
 
 use piston_window::*;
@@ -11,15 +14,15 @@ use piston_window::*;
 use std::sync::{Mutex, Arc, RwLock};
 use std::thread::{self, JoinHandle};
 
-const WIDTH: usize = 1920 / 4;
-const HEIGHT: usize = 1080 / 4;
+const WIDTH: usize = 1920;
+const HEIGHT: usize = 1080;
 
 use std::collections::VecDeque;
 
 fn main() {
     let opengl = OpenGL::V4_4;
 
-    let window: PistonWindow = WindowSettings::new("Hello Piston!", [WIDTH as u32, HEIGHT as u32])
+    let window: PistonWindow<(), GlutinWindow> = WindowSettings::new("Hello Piston!", [WIDTH as u32, HEIGHT as u32])
         .exit_on_esc(true)
         .opengl(opengl)
         .build()
